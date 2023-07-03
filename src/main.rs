@@ -7,7 +7,7 @@ const PKG_NAME: &str = env!("CARGO_PKG_NAME");
 const HELP_STR: &str = "ripcal -h or ripcal --help\n\t\
                                displays this help\n\
                         ripcal --version\n\t\
-                               display the program version\n\
+                               displays the program version\n\
                         ripcal <ip-address>...\n\t\
                                Converts each <ip-address> to corresponding integer";
 
