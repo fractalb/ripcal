@@ -8,6 +8,7 @@ Converts each <ip-address>:
 - from hexadecimal/decimal integers to dotte quad
 
 example:
+
     $ ./ripcal 192.168.2.4 0xc0a1b203 2886732292
     192.168.2.4 = 0xc0a80204
     0xc0a1b203 = 192.161.178.3
