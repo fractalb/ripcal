@@ -1,11 +1,11 @@
 # ripcal
-Convert IP address strings to/from integers
+Convert IP address dotted quads to/from integers
 
     ripcal <ip-address>...
 
 Converts each <ip-address>:
 - from dotted quad to hexadecimal integer
-- from hexadecimal/decimal integers to dotte quad
+- from hexadecimal/decimal integers to dotted quad
 
 example:
 
