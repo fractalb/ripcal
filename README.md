@@ -1,7 +1,7 @@
 # ripcal
 Convert IP addresses dotted quads to/from integers
 
-        ripcal [-i | -x | -q ] <ip-address>...
+        ripcal [-i | -x | -q ] [-r] <ip-address>...
                 Converts each <ip-address> to different formats
                 If no option is provided then ip-quads will be
                 converted to hexa-decimal integers and all
@@ -29,9 +29,26 @@ Converts each <ip-address>:
 
 example:
 
-    $ ./ripcal 192.168.2.4 0xc0a1b203 2886732292
-    192.168.2.4 = 0xc0a80204
-    0xc0a1b203 = 192.161.178.3
-    2886732292 = 172.16.10.4
+        $ ripcal 192.168.2.4 0xc0a80204 3232236036
+        192.168.2.4 = 0xc0a80204
+        0xc0a80204 = 192.168.2.4
+        3232236036 = 192.168.2.4
 
+        $ ripcal -q 192.168.2.4 0xc0a80204 3232236036
+        192.168.2.4 = 192.168.2.4
+        0xc0a80204 = 192.168.2.4
+        3232236036 = 192.168.2.4
 
+        $ ripcal -x 192.168.2.4 0xc0a80204 3232236036
+        192.168.2.4 = 0xc0a80204
+        0xc0a80204 = 0xc0a80204
+        3232236036 = 0xc0a80204
+
+        $ ripcal -i 192.168.2.4 0xc0a80204 3232236036
+        192.168.2.4 = 3232236036
+        0xc0a80204 = 3232236036
+        3232236036 = 3232236036
+
+        $ ripcal 0xc0a80204 -r 0xc0a80204
+        0xc0a80204 = 192.168.2.4
+        Reverse 0xc0a80204 = 4.2.168.192
