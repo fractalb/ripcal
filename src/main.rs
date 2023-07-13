@@ -13,9 +13,9 @@ const HELP_STR: &str = "ripcal [-i | -x | -q ] [-r] <ip-address>...\n\t\
                                --hex or -x\n\t\t\
                                        Converts to a hexa-decimal integer\n\t\
                                --ipv4 or -q\n\t\t\
-                                       Converts to a ip-quad\n\n\
+                                       Converts to a ip-quad\n\t\
                                --reverse-bytes or -r\n\t\t\
-                                       Reverse the byte order
+                                       Reverse the byte order\n\n\
                          \
                          ripcal -h or ripcal --help\n\t\
                                displays this help\n\n\
