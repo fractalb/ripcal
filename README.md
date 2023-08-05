@@ -52,3 +52,26 @@ example:
         $ ripcal 0xc0a80204 -r 0xc0a80204
         0xc0a80204 = 192.168.2.4
         Reverse 0xc0a80204 = 4.2.168.192
+
+When no ip-address arguments are given on the command, then the program
+will read from stdin and write to stdout (filter mode).
+
+        $ ripcal
+        1.2.3.4
+        0x1020304
+        3232236036
+        192.168.2.4
+        ^D
+
+        $ echo "192.168.2.3" | ripcal
+        0xc0a80203
+
+The command expects only one IP address per line in filter mode. The below
+commands won't work as expected
+
+        $ ripcal <<<"192.168.2.3 192.168.3.2"
+        Invaid IP address: 192.168.2.3 192.168.3.2
+
+        $ echo "192.168.2.3 192.168.3.2" | ripcal
+        Invaid IP address: 192.168.2.3 192.168.3.2
+
