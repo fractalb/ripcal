@@ -168,17 +168,6 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
         let output_type = get_output_type(input_type, config.conversion_type);
         let output = format_ipaddr(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
-    } else if let Some(a2) = a.strip_prefix("0x") {
-        // A hexadecimal number as IPv4 address
-        if let Ok(ip) = u32::from_str_radix(&a2, 16) {
-            let addr = Ipv4Addr::from(ip);
-            let input_type = InputType::HexaDecimal;
-            let output_type = get_output_type(input_type, config.conversion_type);
-            let output = format_ipaddr(addr, output_type, config.reverse_bytes);
-            print_output(&output, &a, &config);
-        } else {
-            println!("Invaid IP address: {}", a);
-        }
     } else if let Ok(ip) = a.parse::<u32>() {
         // A decimal number as IPv4 address
         let addr = Ipv4Addr::from(ip);
@@ -187,6 +176,24 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
         let output = format_ipaddr(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else {
+        // See if it's a hexadecimal number as IPv4 address
+        let ip;
+        if let Some(a2) = a.strip_prefix("0x") {
+            // hexadecimal number with "0x" prefix?
+            ip = u32::from_str_radix(&a2, 16);
+        } else {
+            // hexadecimal number without a "0x" prefix?
+            ip = u32::from_str_radix(&a, 16);
+        }
+        if let Ok(ip) = ip {
+            let addr = Ipv4Addr::from(ip);
+            let input_type = InputType::HexaDecimal;
+            let output_type = get_output_type(input_type, config.conversion_type);
+            let output = format_ipaddr(addr, output_type, config.reverse_bytes);
+            print_output(&output, &a, &config);
+            return;
+        }
+        // Not even a hexadecimal number
         println!("Invaid IP address: {}", a);
     }
 }

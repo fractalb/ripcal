@@ -53,6 +53,14 @@ example:
         0xc0a80204 = 192.168.2.4
         Reverse 0xc0a80204 = 4.2.168.192
 
+        $ ripcal 64420102 0x64420102
+        64420102 = 3.214.249.6
+        0x64420102 = 100.66.1.2
+
+        $ ripcal 0xa141e28 a141e28
+        0xa141e28 = 10.20.30.40
+        a141e28 = 10.20.30.40
+
 When no ip-address arguments are given on the command, then the program
 will read from stdin and write to stdout (filter mode).
 
