@@ -41,7 +41,7 @@ enum ConversionType {
     DecaDecimal = 1,
     HexaDecimal = 2,
     IpQuad = 3,
-    IpCidr = 4,
+    IpSubnet = 4,
     IpRange = 5,
 }
 
@@ -50,7 +50,7 @@ enum InputType {
     DecaDecimal = 1,
     HexaDecimal = 2,
     IpQuad = 3,
-    IpCidr = 4,
+    IpSubnet = 4,
     IpRange = 5,
 }
 
@@ -77,12 +77,12 @@ fn get_output_type(input_type: InputType, conversion_type: ConversionType) -> Ou
         ConversionType::DecaDecimal => OutputType::DecaDecimal,
         ConversionType::HexaDecimal => OutputType::HexaDecimal,
         ConversionType::IpQuad => OutputType::IpQuad,
-        ConversionType::IpCidr => OutputType::IpRange,
-        ConversionType::IpRange => OutputType::IpCidr,
+        ConversionType::IpSubnet => OutputType::IpRange,
+        ConversionType::IpRange => OutputType::IpSubnet,
         ConversionType::DefaultConversion => match input_type {
             InputType::IpQuad => OutputType::HexaDecimal,
-            InputType::IpCidr => OutputType::IpRange,
-            InputType::IpRange => OutputType::IpCidr,
+            InputType::IpSubnet => OutputType::IpRange,
+            InputType::IpRange => OutputType::IpSubnet,
             _ => OutputType::IpQuad,
         },
     }
@@ -104,6 +104,26 @@ fn mask_ip_addr(ip: u32, prefix: u8) -> u32 {
     return ip & mask_from_prefix(prefix);
 }
 
+fn format_iprange(iprange_start: u32, iprange_end: u32) -> String {
+    return format!("{} - {}", Ipv4Addr::from(iprange_start),
+                              Ipv4Addr::from(iprange_end));
+}
+
+fn format_ipsubnet_as_iprange(ipaddr: u32, prefix: u8) -> String {
+    let iprange_start: u32 = mask_ip_addr(ipaddr, prefix);
+    let iprange_end: u32 = iprange_start | !mask_from_prefix(prefix);
+    return format_iprange(iprange_start, iprange_end);
+}
+
+fn format_ipsubnet(ipaddr: u32, prefix: u8) -> String {
+    let prefix: u8= if prefix > 32 {
+                    32
+                } else {
+                    prefix
+                };
+    return format!("{}/{}", Ipv4Addr::from(mask_ip_addr(ipaddr, prefix)), prefix);
+}
+
 fn format_ipaddr(ipaddr: Ipv4Addr, prefix: u8, output_type: OutputType, reverse_bytes: bool) -> String {
     let ip: u32 = ipaddr.into();
     let ip: u32 = if reverse_bytes { ip.swap_bytes() } else { ip };
@@ -111,9 +131,8 @@ fn format_ipaddr(ipaddr: Ipv4Addr, prefix: u8, output_type: OutputType, reverse_
         OutputType::DecaDecimal => format!("{}", ip),
         OutputType::HexaDecimal => format!("{:#x}", ip),
         OutputType::IpQuad => format!("{}", Ipv4Addr::from(ip)),
-        OutputType::IpCidr => format!("{}/{}", Ipv4Addr::from(mask_ip_addr(ip, prefix)), prefix),
-        OutputType::IpRange => format!("{} - {}", Ipv4Addr::from(mask_ip_addr(ip, prefix)),
-                                                Ipv4Addr::from(mask_ip_addr(ip, prefix) | !mask_from_prefix(prefix))),
+        OutputType::IpSubnet => format_ipsubnet(ip, prefix),
+        OutputType::IpRange => format_ipsubnet_as_iprange(ip, prefix),
     }
 }
 
@@ -188,19 +207,40 @@ fn process_stdin(config: Config) -> () {
     }
 }
 
+fn get_prefix_from_iprange(start: u32, end: u32) -> u8 {
+    for i in 0..32 {
+        if (start >> i) == (end >> i) {
+            return 32 - i;
+        }
+    }
+    return 0;
+}
+
 fn process_ipaddress(a: &str, config: &Config) -> () {
     if let Some(n) = a.find('/') {
         if let Ok(prefix) = u8::from_str(&a[n+1..]) {
             if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
-                let input_type = InputType::IpCidr;
-                let output =  format_ipaddr(addr, prefix, OutputType::IpCidr, false);
+                // let input_type = InputType::IpSubnet;
+                let output =  format_ipaddr(addr, prefix, OutputType::IpSubnet, false);
                 let output = output + "\n" + &format_ipaddr(addr, prefix, OutputType::IpRange, false);
                 print_output(&output, &a, &config);
                 return;
             }
         }
         println!("Invalid IP subnet: {}", a);
-    } else  if let Ok(addr) = Ipv4Addr::from_str(&a) {
+    } else if let Some(n) = a.find('-') {
+        if let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) {
+            if let Ok(iprange_end) = Ipv4Addr::from_str(a[n+1..].trim()) {
+                // let input_type = InputType::IpRange;
+                let iprange_start: u32 = iprange_start.into();
+                let iprange_end: u32 = iprange_end.into();
+                let prefix = get_prefix_from_iprange(iprange_start, iprange_end);
+                let output = format_ipsubnet(iprange_start, prefix);
+                print_output(&output, &a, &config);
+                return;
+            }
+        }
+    } else if let Ok(addr) = Ipv4Addr::from_str(&a) {
         // Dotted quad IPv4 address
         let input_type = InputType::IpQuad;
         let output_type = get_output_type(input_type, config.conversion_type);
