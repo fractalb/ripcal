@@ -41,6 +41,8 @@ enum ConversionType {
     DecaDecimal = 1,
     HexaDecimal = 2,
     IpQuad = 3,
+    IpCidr = 4,
+    IpRange = 5,
 }
 
 #[derive(Copy, Clone)]
@@ -48,6 +50,8 @@ enum InputType {
     DecaDecimal = 1,
     HexaDecimal = 2,
     IpQuad = 3,
+    IpCidr = 4,
+    IpRange = 5,
 }
 
 type OutputType = InputType;
@@ -73,20 +77,43 @@ fn get_output_type(input_type: InputType, conversion_type: ConversionType) -> Ou
         ConversionType::DecaDecimal => OutputType::DecaDecimal,
         ConversionType::HexaDecimal => OutputType::HexaDecimal,
         ConversionType::IpQuad => OutputType::IpQuad,
+        ConversionType::IpCidr => OutputType::IpRange,
+        ConversionType::IpRange => OutputType::IpCidr,
         ConversionType::DefaultConversion => match input_type {
             InputType::IpQuad => OutputType::HexaDecimal,
+            InputType::IpCidr => OutputType::IpRange,
+            InputType::IpRange => OutputType::IpCidr,
             _ => OutputType::IpQuad,
         },
     }
 }
 
-fn format_ipaddr(ipaddr: Ipv4Addr, output_type: OutputType, reverse_bytes: bool) -> String {
+fn mask_from_prefix(prefix: u8) -> u32 {
+    if prefix == 0 {
+        return 0;
+    }
+    let mask: u32 = 0xffffffff;
+    if prefix < 32 {
+        let n = 32 - prefix;
+        return (mask >> n ) << n;
+    }
+    return mask;
+}
+
+fn mask_ip_addr(ip: u32, prefix: u8) -> u32 {
+    return ip & mask_from_prefix(prefix);
+}
+
+fn format_ipaddr(ipaddr: Ipv4Addr, prefix: u8, output_type: OutputType, reverse_bytes: bool) -> String {
     let ip: u32 = ipaddr.into();
     let ip: u32 = if reverse_bytes { ip.swap_bytes() } else { ip };
     match output_type {
         OutputType::DecaDecimal => format!("{}", ip),
         OutputType::HexaDecimal => format!("{:#x}", ip),
         OutputType::IpQuad => format!("{}", Ipv4Addr::from(ip)),
+        OutputType::IpCidr => format!("{}/{}", Ipv4Addr::from(mask_ip_addr(ip, prefix)), prefix),
+        OutputType::IpRange => format!("{} - {}", Ipv4Addr::from(mask_ip_addr(ip, prefix)),
+                                                Ipv4Addr::from(mask_ip_addr(ip, prefix) | !mask_from_prefix(prefix))),
     }
 }
 
@@ -162,18 +189,29 @@ fn process_stdin(config: Config) -> () {
 }
 
 fn process_ipaddress(a: &str, config: &Config) -> () {
-    if let Ok(addr) = Ipv4Addr::from_str(&a) {
+    if let Some(n) = a.find('/') {
+        if let Ok(prefix) = u8::from_str(&a[n+1..]) {
+            if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
+                let input_type = InputType::IpCidr;
+                let output =  format_ipaddr(addr, prefix, OutputType::IpCidr, false);
+                let output = output + "\n" + &format_ipaddr(addr, prefix, OutputType::IpRange, false);
+                print_output(&output, &a, &config);
+                return;
+            }
+        }
+        println!("Invalid IP subnet: {}", a);
+    } else  if let Ok(addr) = Ipv4Addr::from_str(&a) {
         // Dotted quad IPv4 address
         let input_type = InputType::IpQuad;
         let output_type = get_output_type(input_type, config.conversion_type);
-        let output = format_ipaddr(addr, output_type, config.reverse_bytes);
+        let output = format_ipaddr(addr, 32, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else if let Ok(ip) = a.parse::<u32>() {
         // A decimal number as IPv4 address
         let addr = Ipv4Addr::from(ip);
         let input_type = InputType::DecaDecimal;
         let output_type = get_output_type(input_type, config.conversion_type);
-        let output = format_ipaddr(addr, output_type, config.reverse_bytes);
+        let output = format_ipaddr(addr, 32, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else {
         // See if it's a hexadecimal number as IPv4 address
@@ -189,7 +227,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
             let addr = Ipv4Addr::from(ip);
             let input_type = InputType::HexaDecimal;
             let output_type = get_output_type(input_type, config.conversion_type);
-            let output = format_ipaddr(addr, output_type, config.reverse_bytes);
+            let output = format_ipaddr(addr, 32, output_type, config.reverse_bytes);
             print_output(&output, &a, &config);
             return;
         }
