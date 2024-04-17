@@ -41,8 +41,6 @@ enum ConversionType {
     DecaDecimal = 1,
     HexaDecimal = 2,
     IpQuad = 3,
-    IpSubnet = 4,
-    IpRange = 5,
 }
 
 #[derive(Copy, Clone)]
@@ -50,8 +48,6 @@ enum InputType {
     DecaDecimal = 1,
     HexaDecimal = 2,
     IpQuad = 3,
-    IpSubnet = 4,
-    IpRange = 5,
 }
 
 type OutputType = InputType;
@@ -77,12 +73,8 @@ fn get_output_type(input_type: InputType, conversion_type: ConversionType) -> Ou
         ConversionType::DecaDecimal => OutputType::DecaDecimal,
         ConversionType::HexaDecimal => OutputType::HexaDecimal,
         ConversionType::IpQuad => OutputType::IpQuad,
-        ConversionType::IpSubnet => OutputType::IpRange,
-        ConversionType::IpRange => OutputType::IpSubnet,
         ConversionType::DefaultConversion => match input_type {
             InputType::IpQuad => OutputType::HexaDecimal,
-            InputType::IpSubnet => OutputType::IpRange,
-            InputType::IpRange => OutputType::IpSubnet,
             _ => OutputType::IpQuad,
         },
     }
@@ -127,20 +119,13 @@ fn format_ipsubnet(ipaddr: u32, prefix: u8) -> String {
     );
 }
 
-fn format_ipaddr(
-    ipaddr: Ipv4Addr,
-    prefix: u8,
-    output_type: OutputType,
-    reverse_bytes: bool,
-) -> String {
+fn format_ipaddr(ipaddr: Ipv4Addr, output_type: OutputType, reverse_bytes: bool) -> String {
     let ip: u32 = ipaddr.into();
     let ip: u32 = if reverse_bytes { ip.swap_bytes() } else { ip };
     match output_type {
         OutputType::DecaDecimal => format!("{}", ip),
         OutputType::HexaDecimal => format!("{:#x}", ip),
         OutputType::IpQuad => format!("{}", Ipv4Addr::from(ip)),
-        OutputType::IpSubnet => format_ipsubnet(ip, prefix),
-        OutputType::IpRange => format_ipsubnet_as_iprange(ip, prefix),
     }
 }
 
@@ -228,10 +213,13 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
     if let Some(n) = a.find('/') {
         if let Ok(prefix) = u8::from_str(&a[n + 1..]) {
             if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
-                // let input_type = InputType::IpSubnet;
-                let output = format_ipaddr(addr, prefix, OutputType::IpSubnet, false);
-                let output =
-                    output + "\n" + &format_ipaddr(addr, prefix, OutputType::IpRange, false);
+                let addr: u32 = addr.into();
+                let output = format_ipsubnet(addr, prefix);
+                let output = output.clone()
+                    + "\n"
+                    + &output
+                    + " = "
+                    + &format_ipsubnet_as_iprange(addr, prefix);
                 print_output(&output, &a, &config);
                 return;
             }
@@ -240,7 +228,6 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
     } else if let Some(n) = a.find('-') {
         if let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) {
             if let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) {
-                // let input_type = InputType::IpRange;
                 let iprange_start: u32 = iprange_start.into();
                 let iprange_end: u32 = iprange_end.into();
                 let prefix = get_prefix_from_iprange(iprange_start, iprange_end);
@@ -253,14 +240,14 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
         // Dotted quad IPv4 address
         let input_type = InputType::IpQuad;
         let output_type = get_output_type(input_type, config.conversion_type);
-        let output = format_ipaddr(addr, 32, output_type, config.reverse_bytes);
+        let output = format_ipaddr(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else if let Ok(ip) = a.parse::<u32>() {
         // A decimal number as IPv4 address
         let addr = Ipv4Addr::from(ip);
         let input_type = InputType::DecaDecimal;
         let output_type = get_output_type(input_type, config.conversion_type);
-        let output = format_ipaddr(addr, 32, output_type, config.reverse_bytes);
+        let output = format_ipaddr(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else {
         // See if it's a hexadecimal number as IPv4 address
@@ -276,7 +263,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
             let addr = Ipv4Addr::from(ip);
             let input_type = InputType::HexaDecimal;
             let output_type = get_output_type(input_type, config.conversion_type);
-            let output = format_ipaddr(addr, 32, output_type, config.reverse_bytes);
+            let output = format_ipaddr(addr, output_type, config.reverse_bytes);
             print_output(&output, &a, &config);
             return;
         }
