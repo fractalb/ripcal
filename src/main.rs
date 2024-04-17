@@ -95,7 +95,7 @@ fn mask_from_prefix(prefix: u8) -> u32 {
     let mask: u32 = 0xffffffff;
     if prefix < 32 {
         let n = 32 - prefix;
-        return (mask >> n ) << n;
+        return (mask >> n) << n;
     }
     return mask;
 }
@@ -105,8 +105,11 @@ fn mask_ip_addr(ip: u32, prefix: u8) -> u32 {
 }
 
 fn format_iprange(iprange_start: u32, iprange_end: u32) -> String {
-    return format!("{} - {}", Ipv4Addr::from(iprange_start),
-                              Ipv4Addr::from(iprange_end));
+    return format!(
+        "{} - {}",
+        Ipv4Addr::from(iprange_start),
+        Ipv4Addr::from(iprange_end)
+    );
 }
 
 fn format_ipsubnet_as_iprange(ipaddr: u32, prefix: u8) -> String {
@@ -116,15 +119,20 @@ fn format_ipsubnet_as_iprange(ipaddr: u32, prefix: u8) -> String {
 }
 
 fn format_ipsubnet(ipaddr: u32, prefix: u8) -> String {
-    let prefix: u8= if prefix > 32 {
-                    32
-                } else {
-                    prefix
-                };
-    return format!("{}/{}", Ipv4Addr::from(mask_ip_addr(ipaddr, prefix)), prefix);
+    let prefix: u8 = if prefix > 32 { 32 } else { prefix };
+    return format!(
+        "{}/{}",
+        Ipv4Addr::from(mask_ip_addr(ipaddr, prefix)),
+        prefix
+    );
 }
 
-fn format_ipaddr(ipaddr: Ipv4Addr, prefix: u8, output_type: OutputType, reverse_bytes: bool) -> String {
+fn format_ipaddr(
+    ipaddr: Ipv4Addr,
+    prefix: u8,
+    output_type: OutputType,
+    reverse_bytes: bool,
+) -> String {
     let ip: u32 = ipaddr.into();
     let ip: u32 = if reverse_bytes { ip.swap_bytes() } else { ip };
     match output_type {
@@ -218,11 +226,12 @@ fn get_prefix_from_iprange(start: u32, end: u32) -> u8 {
 
 fn process_ipaddress(a: &str, config: &Config) -> () {
     if let Some(n) = a.find('/') {
-        if let Ok(prefix) = u8::from_str(&a[n+1..]) {
+        if let Ok(prefix) = u8::from_str(&a[n + 1..]) {
             if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
                 // let input_type = InputType::IpSubnet;
-                let output =  format_ipaddr(addr, prefix, OutputType::IpSubnet, false);
-                let output = output + "\n" + &format_ipaddr(addr, prefix, OutputType::IpRange, false);
+                let output = format_ipaddr(addr, prefix, OutputType::IpSubnet, false);
+                let output =
+                    output + "\n" + &format_ipaddr(addr, prefix, OutputType::IpRange, false);
                 print_output(&output, &a, &config);
                 return;
             }
@@ -230,7 +239,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
         println!("Invalid IP subnet: {}", a);
     } else if let Some(n) = a.find('-') {
         if let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) {
-            if let Ok(iprange_end) = Ipv4Addr::from_str(a[n+1..].trim()) {
+            if let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) {
                 // let input_type = InputType::IpRange;
                 let iprange_start: u32 = iprange_start.into();
                 let iprange_end: u32 = iprange_end.into();
