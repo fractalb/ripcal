@@ -194,7 +194,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
             return;
         }
         // Not even a hexadecimal number
-        println!("Invaid IP address: {}", a);
+        println!("Invalid IP address: {}", a);
     }
 }
 
