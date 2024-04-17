@@ -230,8 +230,17 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
             if let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) {
                 let iprange_start: u32 = iprange_start.into();
                 let iprange_end: u32 = iprange_end.into();
+                if iprange_start > iprange_end {
+                    println!("Invalid range: {}", a);
+                    return;
+                }
                 let prefix = get_prefix_from_iprange(iprange_start, iprange_end);
                 let output = format_ipsubnet(iprange_start, prefix);
+                let output = output.clone()
+                    + "\n"
+                    + &output
+                    + " = "
+                    + &format_ipsubnet_as_iprange(iprange_start, prefix);
                 print_output(&output, &a, &config);
                 return;
             }
