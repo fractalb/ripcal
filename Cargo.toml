@@ -4,6 +4,7 @@ version = "0.5.1"
 edition = "2021"
 license = "GPL-2.0"
 categories = ["command-line-utilities"]
+repository = "https://github.com/fractalb/ripcal"
 description = "Convert IP address strings to/from integers"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
