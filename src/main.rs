@@ -17,14 +17,20 @@ const HELP_STR: &str = "ripcal [-i | -x | -q ] [-r] [<ip-address>...]\n\t\
                                --ipv4 or -q\n\t\t\
                                        Converts to a ip-quad\n\t\
                                --reverse-bytes or -r\n\t\t\
-                                       Reverse the byte order\n\n\
+                                       Reverse the byte order\n\n\t\
                                If no ip-address arguments are given, then it'll\n\t\
-                               read from stdin and output to stdout (filter mode)\n\t\
-                         \
-                         ripcal -h or ripcal --help\n\t\
+                               read from stdin and output to stdout (filter mode)\n\n\
+                        \
+                        ripcal <ip-addr/subnet> | \"<ip-start - ip-end>\"\n\t\
+                                ip-addr/subnet will be converted to the corresponding\n\t\
+                                ip-range (\"start - end\"). \"start - end\" (ip-range)\n\t\
+                                will be converted to the minimal ip-addr/subnet which\n\t\
+                                covers the given range.\n\n\
+                        \
+                        ripcal -h or ripcal --help\n\t\
                                displays this help\n\n\
-                         \
-                         ripcal --version\n\t\
+                        \
+                        ripcal --version\n\t\
                                displays the program version\n";
 
 fn print_version() -> () {

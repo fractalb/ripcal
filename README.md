@@ -1,5 +1,6 @@
 # ripcal
 Convert IP addresses dotted quads to/from integers
+Also, Converts IP subnets to/from IP ranges
 
         ripcal [-i | -x | -q ] [-r] <ip-address>...
                 Converts each <ip-address> to different formats
@@ -17,17 +18,30 @@ Convert IP addresses dotted quads to/from integers
                 --reverse-bytes or -r
                         Reverses the byte order
 
-        ripcal --version
-                displays the program version\n"
+	ripcal <ip-addr/subnet> | "<ip-start - ip-end>"
+		ip-addr/subnet will be converted to the corresponding
+		ip-range ("start - end"). "start - end" (ip-range)
+		will be converted to the minimal ip-addr/subnet which
+		covers the given range.
+
+	ripcal <ip-addr/subnet> | "<ip-start - ip-end>"
+		ip-addr/subnet will be converted to ip-range ("start - end").
+		"start_ip - end_ip" (ip-range) will be converted to minimal
+		ip-addr/subnet which covers the given range.
 
         ripcal -h or ripcal --help
                 displays this help
+
+        ripcal --version
+                displays the program version\n"
 
 Converts each <ip-address>:
 - from dotted quad to hexadecimal integer
 - from hexadecimal/decimal integers to dotted quad
 
-example:
+Converts ip-address/subnet representation to/from ip-address range
+
+Examples:
 
         $ ripcal 192.168.2.4 0xc0a80204 3232236036
         192.168.2.4 = 0xc0a80204
@@ -60,6 +74,22 @@ example:
         $ ripcal 0xa141e28 a141e28
         0xa141e28 = 10.20.30.40
         a141e28 = 10.20.30.40
+
+	$ ripcal 192.168.1.0/24
+	192.168.1.0/24 = 192.168.1.0/24
+	192.168.1.0/24 = 192.168.1.0 - 192.168.1.255
+
+	$ ripcal "192.168.1.1 - 192.168.1.127"
+	192.168.1.1 - 192.168.1.127 = 192.168.1.0/25
+	192.168.1.0/25 = 192.168.1.0 - 192.168.1.127
+
+Note1: "192.168.1.1 - 192.168.1.127" is converted to "192.168.1.0 - 192.168.1.127"
+since the given input cannot be represented as an exact subnet. So, the input is
+converted into minimal enclosing subnet (192.168.1.0/25)
+
+Note2: The quotes around the IP address range ("192.168.1.1 - 192.168.1.127")
+is needed because there is a space in between the ip-addresses. Alternatively,
+192.168.1.1-192.168.1.127, with no spaces, will work without quotes.
 
 When no ip-address arguments are given on the command, then the program
 will read from stdin and write to stdout (filter mode).
