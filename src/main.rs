@@ -4,6 +4,7 @@ use std::io::BufRead;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
+use std::vec::Vec;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_NAME: &str = env!("CARGO_PKG_NAME");
@@ -74,6 +75,41 @@ impl Config {
     }
 }
 
+#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+struct Ipv4Range {
+    start: u32,
+    end: u32,
+}
+
+fn merge_2<'a>(new_vec: &'a mut Vec<Ipv4Range>, r2: Ipv4Range) -> &'a mut Vec<Ipv4Range> {
+    if new_vec.is_empty() {
+        new_vec.push(r2);
+        return new_vec;
+    }
+    let len = new_vec.len();
+    let r1: &mut Ipv4Range = &mut new_vec[len - 1];
+    if r2.start > r1.end + 1 {
+        new_vec.push(r2);
+        return new_vec;
+    }
+
+    r1.end = std::cmp::max(r1.end, r2.end);
+    println!("new_vec: {:?}", new_vec);
+    return new_vec;
+}
+
+fn merge_ranges(vec: &Vec<Ipv4Range>) -> Vec<Ipv4Range> {
+    //println!("merging: {:?}", vec);
+    let mut vec2 = Vec::new();
+    if !vec.is_empty() {
+        vec2.push(vec[0]);
+        for i in 1..vec.len() {
+            merge_2(&mut vec2, vec[i]);
+        }
+    }
+    vec2
+}
+
 fn get_output_type(input_type: InputType, conversion_type: ConversionType) -> OutputType {
     match conversion_type {
         ConversionType::DecaDecimal => OutputType::DecaDecimal,
@@ -102,18 +138,17 @@ fn mask_ip_addr(ip: u32, prefix: u8) -> u32 {
     return ip & mask_from_prefix(prefix);
 }
 
-fn format_iprange(iprange_start: u32, iprange_end: u32) -> String {
+fn format_iprange(range: Ipv4Range) -> String {
     return format!(
         "{} - {}",
-        Ipv4Addr::from(iprange_start),
-        Ipv4Addr::from(iprange_end)
+        Ipv4Addr::from(range.start),
+        Ipv4Addr::from(range.end)
     );
 }
 
 fn format_ipsubnet_as_iprange(ipaddr: u32, prefix: u8) -> String {
-    let iprange_start: u32 = mask_ip_addr(ipaddr, prefix);
-    let iprange_end: u32 = iprange_start | !mask_from_prefix(prefix);
-    return format_iprange(iprange_start, iprange_end);
+    let range = ip_prefix_to_range(ipaddr, prefix);
+    return format_iprange(range);
 }
 
 fn format_ipsubnet(ipaddr: u32, prefix: u8) -> String {
@@ -165,6 +200,8 @@ fn process_args(itr: &mut std::env::Args) -> () {
     let mut config = Config::default_config();
     itr.next(); // Skip program name.
     let mut empty_optional_args = true;
+    let mut vec = Vec::<Ipv4Range>::new();
+    let mut range_merge = false;
     for a in itr {
         if a == "--reverse-bytes" || a == "-r" {
             config.reverse_bytes = true;
@@ -174,8 +211,19 @@ fn process_args(itr: &mut std::env::Args) -> () {
             config.conversion_type = ConversionType::HexaDecimal;
         } else if a == "--ipv4" || a == "-q" {
             config.conversion_type = ConversionType::IpQuad;
+        } else if a == "--merge-ranges" || a == "-m" {
+            range_merge = true;
         } else {
             empty_optional_args = false;
+            if range_merge {
+                if let Some(range) = parse_range(&a) {
+                    vec.push(range);
+                    continue;
+                }
+                vec.sort();
+                process_ranges(&vec);
+                vec.clear();
+            }
             process_ipaddress(&a, &config);
         }
     }
@@ -185,6 +233,53 @@ fn process_args(itr: &mut std::env::Args) -> () {
     if empty_optional_args {
         process_stdin(config);
     }
+
+    if range_merge {
+        vec.sort();
+        process_ranges(&vec);
+        vec.clear();
+    }
+}
+
+fn parse_range(a: &String) -> Option<Ipv4Range> {
+    if let Some(n) = a.find('/') {
+        if let Ok(prefix) = u8::from_str(&a[n + 1..]) {
+            if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
+                let addr: u32 = addr.into();
+                return Some(ip_prefix_to_range(addr, prefix));
+            }
+        }
+        println!("Invalid IP subnet: {}", a);
+    } else if let Some(n) = a.find('-') {
+        if let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) {
+            if let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) {
+                let iprange_start: u32 = iprange_start.into();
+                let iprange_end: u32 = iprange_end.into();
+                if iprange_start > iprange_end {
+                    println!("Invalid range: {}", a);
+                    return None;
+                }
+                let range = Ipv4Range {
+                    start: iprange_start,
+                    end: iprange_end,
+                };
+                return Some(range);
+            }
+        }
+    }
+    return None;
+}
+
+fn process_ranges(vec: &Vec<Ipv4Range>) -> () {
+    let vec = merge_ranges(vec);
+    if vec.is_empty() {
+        return;
+    }
+    print!("[{}", format_iprange(vec[0]));
+    for i in 1..vec.len() {
+        print!(", {}", format_iprange(vec[i]));
+    }
+    println!("]");
 }
 
 fn process_stdin(config: Config) -> () {
@@ -213,6 +308,16 @@ fn get_prefix_from_iprange(start: u32, end: u32) -> u8 {
         }
     }
     return 0;
+}
+
+fn ip_prefix_to_range(ip: u32, prefix: u8) -> Ipv4Range {
+    let iprange_start: u32 = mask_ip_addr(ip, prefix);
+    let iprange_end: u32 = iprange_start | !mask_from_prefix(prefix);
+    let range = Ipv4Range {
+        start: iprange_start,
+        end: iprange_end,
+    };
+    return range;
 }
 
 fn process_ipaddress(a: &str, config: &Config) -> () {
