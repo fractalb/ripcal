@@ -81,6 +81,18 @@ struct Ipv4Range {
     end: u32,
 }
 
+#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
+struct Ipv4Subnet {
+    addr: u32,
+    prefix: u8,
+}
+
+impl std::fmt::Display for Ipv4Subnet {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}/{}", self.addr, self.prefix)
+    }
+}
+
 fn merge_2<'a>(new_vec: &'a mut Vec<Ipv4Range>, r2: Ipv4Range) -> &'a mut Vec<Ipv4Range> {
     if new_vec.is_empty() {
         new_vec.push(r2);
@@ -146,18 +158,18 @@ fn format_iprange(range: Ipv4Range) -> String {
     );
 }
 
+fn format_ipsubnet(subnet: Ipv4Subnet) -> String {
+    let prefix: u8 = if subnet.prefix > 32 {
+        32
+    } else {
+        subnet.prefix
+    };
+    return format!("{}/{}", Ipv4Addr::from(subnet.addr), prefix);
+}
+
 fn format_ipsubnet_as_iprange(ipaddr: u32, prefix: u8) -> String {
     let range = ip_prefix_to_range(ipaddr, prefix);
     return format_iprange(range);
-}
-
-fn format_ipsubnet(ipaddr: u32, prefix: u8) -> String {
-    let prefix: u8 = if prefix > 32 { 32 } else { prefix };
-    return format!(
-        "{}/{}",
-        Ipv4Addr::from(mask_ip_addr(ipaddr, prefix)),
-        prefix
-    );
 }
 
 fn format_ipaddr(ipaddr: Ipv4Addr, output_type: OutputType, reverse_bytes: bool) -> String {
@@ -270,16 +282,35 @@ fn parse_range(a: &String) -> Option<Ipv4Range> {
     return None;
 }
 
-fn process_ranges(vec: &Vec<Ipv4Range>) -> () {
-    let vec = merge_ranges(vec);
-    if vec.is_empty() {
-        return;
-    }
+fn print_range_vec(vec: &Vec<Ipv4Range>) {
     print!("[{}", format_iprange(vec[0]));
     for i in 1..vec.len() {
         print!(", {}", format_iprange(vec[i]));
     }
     println!("]");
+}
+
+fn print_subnet_vec(vec: &Vec<Ipv4Subnet>) {
+    print!("[{}", format_ipsubnet(vec[0]));
+    for i in 1..vec.len() {
+        print!(", {}", format_ipsubnet(vec[i]));
+    }
+    println!("]");
+}
+
+fn process_ranges(vec: &Vec<Ipv4Range>) -> () {
+    if vec.is_empty() {
+        return;
+    }
+    let vec = merge_ranges(vec);
+    print_range_vec(&vec);
+
+    let mut vec2: Vec<Ipv4Subnet> = Vec::new();
+    for i in 0..vec.len() {
+        let tmp = ip_range_to_subnets(vec[i]);
+        vec2.extend(tmp.iter());
+    }
+    print_subnet_vec(&vec2);
 }
 
 fn process_stdin(config: Config) -> () {
@@ -310,6 +341,35 @@ fn get_prefix_from_iprange(start: u32, end: u32) -> u8 {
     return 0;
 }
 
+fn count_suffix_zero_bits(ip: u32) -> u8 {
+    let mut i = 0;
+    let mut ip = ip;
+    while (i <= 32) && ((ip & 0x1) == 0x0) {
+        i += 1;
+        ip >>= 1
+    }
+    return i;
+}
+
+fn ip_range_to_subnets(range: Ipv4Range) -> Vec<Ipv4Subnet> {
+    let mut r = range;
+    let mut vec: Vec<Ipv4Subnet> = Vec::new();
+    while r.start <= r.end {
+        let mut s: u8 = count_suffix_zero_bits(r.start);
+        let mut diff: u32 = if s < 32 { (1u32 << s) - 1 } else { u32::MAX };
+        while (r.start + diff) > r.end {
+            diff >>= 1;
+            s -= 1;
+        }
+        vec.push(Ipv4Subnet {
+            addr: r.start,
+            prefix: 32 - s,
+        });
+        r.start += diff + 1;
+    }
+    return vec;
+}
+
 fn ip_prefix_to_range(ip: u32, prefix: u8) -> Ipv4Range {
     let iprange_start: u32 = mask_ip_addr(ip, prefix);
     let iprange_end: u32 = iprange_start | !mask_from_prefix(prefix);
@@ -325,7 +385,11 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
         if let Ok(prefix) = u8::from_str(&a[n + 1..]) {
             if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
                 let addr: u32 = addr.into();
-                let output = format_ipsubnet(addr, prefix);
+                let subnet = Ipv4Subnet {
+                    addr: addr,
+                    prefix: prefix,
+                };
+                let output = format_ipsubnet(subnet);
                 let output = output.clone()
                     + "\n"
                     + &output
@@ -346,7 +410,11 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
                     return;
                 }
                 let prefix = get_prefix_from_iprange(iprange_start, iprange_end);
-                let output = format_ipsubnet(iprange_start, prefix);
+                let subnet = Ipv4Subnet {
+                    addr: iprange_start,
+                    prefix: prefix,
+                };
+                let output = format_ipsubnet(subnet);
                 let output = output.clone()
                     + "\n"
                     + &output
