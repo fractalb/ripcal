@@ -106,7 +106,6 @@ fn merge_2<'a>(new_vec: &'a mut Vec<Ipv4Range>, r2: Ipv4Range) -> &'a mut Vec<Ip
     }
 
     r1.end = std::cmp::max(r1.end, r2.end);
-    println!("new_vec: {:?}", new_vec);
     return new_vec;
 }
 
@@ -341,7 +340,7 @@ fn get_prefix_from_iprange(start: u32, end: u32) -> u8 {
     return 0;
 }
 
-fn count_suffix_zero_bits(ip: u32) -> u8 {
+fn count_suffix_zero_bits(ip: u64) -> u8 {
     let mut i = 0;
     let mut ip = ip;
     while (i <= 32) && ((ip & 0x1) == 0x0) {
@@ -352,20 +351,21 @@ fn count_suffix_zero_bits(ip: u32) -> u8 {
 }
 
 fn ip_range_to_subnets(range: Ipv4Range) -> Vec<Ipv4Subnet> {
-    let mut r = range;
     let mut vec: Vec<Ipv4Subnet> = Vec::new();
-    while r.start <= r.end {
-        let mut s: u8 = count_suffix_zero_bits(r.start);
-        let mut diff: u32 = if s < 32 { (1u32 << s) - 1 } else { u32::MAX };
-        while (r.start + diff) > r.end {
+    let mut start: u64 = range.start.into();
+    let end: u64 = range.end.into();
+    while start <= end {
+        let mut s: u8 = count_suffix_zero_bits(start);
+        let mut diff: u64 = (1u64 << s) - 1;
+        while (start + diff) > end {
             diff >>= 1;
             s -= 1;
         }
         vec.push(Ipv4Subnet {
-            addr: r.start,
+            addr: start as u32,
             prefix: 32 - s,
         });
-        r.start += diff + 1;
+        start += diff + 1;
     }
     return vec;
 }
