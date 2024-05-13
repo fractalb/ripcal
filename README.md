@@ -18,16 +18,21 @@ Also, Converts IP subnets to/from IP ranges
                 --reverse-bytes or -r
                         Reverses the byte order
 
-	ripcal <ip-addr/subnet> | "<ip-start - ip-end>"
-		ip-addr/subnet will be converted to the corresponding
-		ip-range ("start - end"). "start - end" (ip-range)
-		will be converted to the minimal ip-addr/subnet which
-		covers the given range.
+        ripcal <ip-addr/subnet> | "<ip-start - ip-end>"
+                ip-addr/subnet will be converted to the corresponding
+                ip-range ("start - end"). "start - end" (ip-range)
+                will be converted to the minimal ip-addr/subnet which
+                covers the given range.
 
-	ripcal <ip-addr/subnet> | "<ip-start - ip-end>"
-		ip-addr/subnet will be converted to ip-range ("start - end").
-		"start_ip - end_ip" (ip-range) will be converted to minimal
-		ip-addr/subnet which covers the given range.
+        ripcal <ip-addr/subnet> | "<ip-start - ip-end>"
+                ip-addr/subnet will be converted to ip-range ("start - end").
+                "start_ip - end_ip" (ip-range) will be converted to minimal
+                ip-addr/subnet which covers the given range.
+
+        ripcal -m <ip-addr/subnet> | "<ip-start - ip-end>"
+                Merge overlapping subnets and/or ip-ranges and print a minimal
+                set of ip-ranges (and subnets) that cover all the input
+                ip-ranges (and/or) subnets.
 
         ripcal -h or ripcal --help
                 displays this help
@@ -75,13 +80,13 @@ Examples:
         0xa141e28 = 10.20.30.40
         a141e28 = 10.20.30.40
 
-	$ ripcal 192.168.1.0/24
-	192.168.1.0/24 = 192.168.1.0/24
-	192.168.1.0/24 = 192.168.1.0 - 192.168.1.255
+        $ ripcal 192.168.1.0/24
+        192.168.1.0/24 = 192.168.1.0/24
+        192.168.1.0/24 = 192.168.1.0 - 192.168.1.255
 
-	$ ripcal "192.168.1.1 - 192.168.1.127"
-	192.168.1.1 - 192.168.1.127 = 192.168.1.0/25
-	192.168.1.0/25 = 192.168.1.0 - 192.168.1.127
+        $ ripcal "192.168.1.1 - 192.168.1.127"
+        192.168.1.1 - 192.168.1.127 = 192.168.1.0/25
+        192.168.1.0/25 = 192.168.1.0 - 192.168.1.127
 
 Note1: "192.168.1.1 - 192.168.1.127" is converted to "192.168.1.0 - 192.168.1.127"
 since the given input cannot be represented as an exact subnet. So, the input is
@@ -90,6 +95,15 @@ converted into minimal enclosing subnet (192.168.1.0/25)
 Note2: The quotes around the IP address range ("192.168.1.1 - 192.168.1.127")
 is needed because there is a space in between the ip-addresses. Alternatively,
 192.168.1.1-192.168.1.127, with no spaces, will work without quotes.
+
+        $ ripcal -m "192.168.1.1 - 192.168.1.127"
+        [192.168.1.1 - 192.168.1.127]
+        [192.168.1.1/32, 192.168.1.2/31, 192.168.1.4/30, 192.168.1.8/29, 192.168.1.16/28, 192.168.1.32/27, 192.168.1.64/26]
+
+        $ ripcal -m "192.168.1.0 - 192.168.1.255" "192.168.3.0 - 192.168.3.255"
+        [192.168.1.0 - 192.168.1.255, 192.168.3.0 - 192.168.3.255]
+        [192.168.1.0/24, 192.168.3.0/24]
+
 
 When no ip-address arguments are given on the command, then the program
 will read from stdin and write to stdout (filter mode).
