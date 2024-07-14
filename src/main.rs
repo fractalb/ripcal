@@ -28,11 +28,16 @@ const HELP_STR: &str = "ripcal [-i | -x | -q ] [-r] [<ip-address>...]\n\t\
                                 will be converted to the minimal ip-addr/subnet which\n\t\
                                 covers the given range.\n\n\
                         \
+                        ripcal -m (<ip-addr/subnet> | <ip-range>)...\n\t\
+                                Merges all the ranges/subnets and presents a minimal\n\t\
+                                set of ranges and subnets that exactly covers the\n\t\
+                                specified subnets/ranges on the command line.\n\n\
+                        \
                         ripcal -h or ripcal --help\n\t\
-                               displays this help\n\n\
+                                displays this help\n\n\
                         \
                         ripcal --version\n\t\
-                               displays the program version\n";
+                                displays the program version\n";
 
 fn print_version() -> () {
     println!("{} - {}", PKG_NAME, VERSION);
