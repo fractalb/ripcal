@@ -8,36 +8,37 @@ use std::vec::Vec;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_NAME: &str = env!("CARGO_PKG_NAME");
-const HELP_STR: &str = "ripcal [-i | -x | -q ] [-r] [<ip-address>...]\n\t\
-                               Converts each <ip-address> to different formats\n\t\
-                               Options:\n\t\
-                               --integer or -i\n\t\t\
-                                       Converts to a deca-decimal integer\n\t\
-                               --hex or -x\n\t\t\
-                                       Converts to a hexa-decimal integer\n\t\
-                               --ipv4 or -q\n\t\t\
-                                       Converts to a ip-quad\n\t\
-                               --reverse-bytes or -r\n\t\t\
-                                       Reverse the byte order\n\n\t\
-                               If no ip-address arguments are given, then it'll\n\t\
-                               read from stdin and output to stdout (filter mode)\n\n\
-                        \
-                        ripcal <ip-addr/subnet> | \"<ip-start - ip-end>\"\n\t\
-                                ip-addr/subnet will be converted to the corresponding\n\t\
-                                ip-range (\"start - end\"). \"start - end\" (ip-range)\n\t\
-                                will be converted to the minimal ip-addr/subnet which\n\t\
-                                covers the given range.\n\n\
-                        \
-                        ripcal -m (<ip-addr/subnet> | <ip-range>)...\n\t\
-                                Merges all the ranges/subnets and presents a minimal\n\t\
-                                set of ranges and subnets that exactly covers the\n\t\
-                                specified subnets/ranges on the command line.\n\n\
-                        \
-                        ripcal -h or ripcal --help\n\t\
-                                displays this help\n\n\
-                        \
-                        ripcal --version\n\t\
-                                displays the program version\n";
+const HELP_STR: &str = r#"ripcal [-i | -x | -q ] [-r] [<ip-address>...]
+        Converts each <ip-address> to different formats
+        Options:
+        --integer or -i
+                Converts to a deca-decimal integer
+        --hex or -x
+                Converts to a hexa-decimal integer
+        --ipv4 or -q
+                Converts to a ip-quad
+        --reverse-bytes or -r\
+                Reverse the byte order
+
+        If no ip-address arguments are given, then it'll
+        read from stdin and output to stdout (filter mode)
+
+ripcal <ip-addr/subnet> | \"<ip-start - ip-end>\"
+        ip-addr/subnet will be converted to the corresponding
+        ip-range (\"start - end\"). \"start - end\" (ip-range)
+        will be converted to the minimal ip-addr/subnet which
+        covers the given range.
+
+ripcal -m (<ip-addr/subnet> | <ip-range>)...
+        Merges all the ranges/subnets and presents a minimal
+        set of ranges and subnets that exactly covers the
+        specified subnets/ranges on the command line.
+
+ripcal -h or ripcal --help
+        displays this help
+
+ripcal --version
+        displays the program version"#;
 
 fn print_version() -> () {
     println!("{} - {}", PKG_NAME, VERSION);
