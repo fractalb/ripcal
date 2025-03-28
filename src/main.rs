@@ -99,32 +99,29 @@ impl std::fmt::Display for Ipv4Subnet {
     }
 }
 
-fn merge_2<'a>(new_vec: &'a mut Vec<Ipv4Range>, r2: Ipv4Range) -> &'a mut Vec<Ipv4Range> {
-    if new_vec.is_empty() {
-        new_vec.push(r2);
-        return new_vec;
-    }
-    let len = new_vec.len();
-    let r1: &mut Ipv4Range = &mut new_vec[len - 1];
-    if r2.start > r1.end + 1 {
-        new_vec.push(r2);
-        return new_vec;
+/**
+ * Expects a sorted ranges, in non-decreasing order.
+ */
+fn merge_ranges(ranges: &mut Vec<Ipv4Range>) {
+    let n = ranges.len();
+    if n < 2 {
+        return;
     }
 
-    r1.end = std::cmp::max(r1.end, r2.end);
-    return new_vec;
-}
-
-fn merge_ranges(vec: &Vec<Ipv4Range>) -> Vec<Ipv4Range> {
-    //println!("merging: {:?}", vec);
-    let mut vec2 = Vec::new();
-    if !vec.is_empty() {
-        vec2.push(vec[0]);
-        for i in 1..vec.len() {
-            merge_2(&mut vec2, vec[i]);
+    let mut j = 0;
+    for i in 1..n {
+        // It merges not only overlapping subnets, but also
+        // adjacent subnets.
+        // eg: 192.168.24.2.2/32, 192.168.24.2.3/32 => 192.168.24.2.2/31
+        if ranges[i].start > ranges[j].end + 1 {
+            j += 1;
+            ranges[j] = ranges[i];
+        } else {
+            ranges[j].end = std::cmp::max(ranges[j].end, ranges[i].end);
         }
     }
-    vec2
+    j += 1;
+    ranges.drain(j..);
 }
 
 fn get_output_type(input_type: InputType, conversion_type: ConversionType) -> OutputType {
@@ -294,6 +291,10 @@ fn print_range_vec(vec: &Vec<Ipv4Range>) {
 }
 
 fn print_subnet_vec(vec: &Vec<Ipv4Subnet>) {
+    if vec.is_empty() {
+        println!("[]");
+        return;
+    }
     print!("[{}", ipsubnet_to_string(vec[0]));
     for i in 1..vec.len() {
         print!(", {}", ipsubnet_to_string(vec[i]));
@@ -306,7 +307,7 @@ fn process_ranges(vec: &mut Vec<Ipv4Range>) -> () {
         return;
     }
     vec.sort();
-    *vec = merge_ranges(vec);
+    merge_ranges(vec);
     print_range_vec(&vec);
 
     let mut vec2: Vec<Ipv4Subnet> = Vec::new();
