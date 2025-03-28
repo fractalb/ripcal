@@ -237,7 +237,7 @@ fn process_args(itr: &mut std::env::Args) -> () {
                     vec.push(range);
                     continue;
                 }
-                process_ranges(&vec);
+                process_ranges(&mut vec);
                 vec.clear();
             }
             process_ipaddress(&a, &config);
@@ -251,7 +251,7 @@ fn process_args(itr: &mut std::env::Args) -> () {
     }
 
     if range_merge {
-        process_ranges(&vec);
+        process_ranges(&mut vec);
         vec.clear();
     }
 }
@@ -301,12 +301,12 @@ fn print_subnet_vec(vec: &Vec<Ipv4Subnet>) {
     println!("]");
 }
 
-fn process_ranges(vec: &Vec<Ipv4Range>) -> () {
+fn process_ranges(vec: &mut Vec<Ipv4Range>) -> () {
     if vec.is_empty() {
         return;
     }
     vec.sort();
-    let vec = merge_ranges(vec);
+    *vec = merge_ranges(vec);
     print_range_vec(&vec);
 
     let mut vec2: Vec<Ipv4Subnet> = Vec::new();
