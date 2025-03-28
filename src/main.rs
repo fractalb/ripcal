@@ -155,7 +155,7 @@ fn mask_ip_addr(ip: u32, prefix: u8) -> u32 {
     return ip & mask_from_prefix(prefix);
 }
 
-fn format_iprange(range: Ipv4Range) -> String {
+fn iprange_to_string(range: Ipv4Range) -> String {
     return format!(
         "{} - {}",
         Ipv4Addr::from(range.start),
@@ -174,7 +174,7 @@ fn format_ipsubnet(subnet: Ipv4Subnet) -> String {
 
 fn format_ipsubnet_as_iprange(ipaddr: u32, prefix: u8) -> String {
     let range = ip_prefix_to_range(ipaddr, prefix);
-    return format_iprange(range);
+    return iprange_to_string(range);
 }
 
 fn format_ipaddr(ipaddr: Ipv4Addr, output_type: OutputType, reverse_bytes: bool) -> String {
@@ -286,9 +286,9 @@ fn parse_range(a: &String) -> Option<Ipv4Range> {
 }
 
 fn print_range_vec(vec: &Vec<Ipv4Range>) {
-    print!("[{}", format_iprange(vec[0]));
+    print!("[{}", iprange_to_string(vec[0]));
     for i in 1..vec.len() {
-        print!(", {}", format_iprange(vec[i]));
+        print!(", {}", iprange_to_string(vec[i]));
     }
     println!("]");
 }
