@@ -177,7 +177,7 @@ fn format_ipsubnet_as_iprange(ipaddr: u32, prefix: u8) -> String {
     return iprange_to_string(range);
 }
 
-fn format_ipaddr(ipaddr: Ipv4Addr, output_type: OutputType, reverse_bytes: bool) -> String {
+fn ipaddr_to_string(ipaddr: Ipv4Addr, output_type: OutputType, reverse_bytes: bool) -> String {
     let ip: u32 = ipaddr.into();
     let ip: u32 = if reverse_bytes { ip.swap_bytes() } else { ip };
     match output_type {
@@ -433,14 +433,14 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
         // Dotted quad IPv4 address
         let input_type = InputType::IpQuad;
         let output_type = get_output_type(input_type, config.conversion_type);
-        let output = format_ipaddr(addr, output_type, config.reverse_bytes);
+        let output = ipaddr_to_string(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else if let Ok(ip) = a.parse::<u32>() {
         // A decimal number as IPv4 address
         let addr = Ipv4Addr::from(ip);
         let input_type = InputType::DecaDecimal;
         let output_type = get_output_type(input_type, config.conversion_type);
-        let output = format_ipaddr(addr, output_type, config.reverse_bytes);
+        let output = ipaddr_to_string(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else {
         // See if it's a hexadecimal number as IPv4 address
@@ -456,7 +456,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
             let addr = Ipv4Addr::from(ip);
             let input_type = InputType::HexaDecimal;
             let output_type = get_output_type(input_type, config.conversion_type);
-            let output = format_ipaddr(addr, output_type, config.reverse_bytes);
+            let output = ipaddr_to_string(addr, output_type, config.reverse_bytes);
             print_output(&output, &a, &config);
             return;
         }
