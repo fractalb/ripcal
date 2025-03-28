@@ -163,7 +163,7 @@ fn iprange_to_string(range: Ipv4Range) -> String {
     );
 }
 
-fn format_ipsubnet(subnet: Ipv4Subnet) -> String {
+fn ipsubnet_to_string(subnet: Ipv4Subnet) -> String {
     let prefix: u8 = if subnet.prefix > 32 {
         32
     } else {
@@ -294,9 +294,9 @@ fn print_range_vec(vec: &Vec<Ipv4Range>) {
 }
 
 fn print_subnet_vec(vec: &Vec<Ipv4Subnet>) {
-    print!("[{}", format_ipsubnet(vec[0]));
+    print!("[{}", ipsubnet_to_string(vec[0]));
     for i in 1..vec.len() {
-        print!(", {}", format_ipsubnet(vec[i]));
+        print!(", {}", ipsubnet_to_string(vec[i]));
     }
     println!("]");
 }
@@ -394,7 +394,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
                     addr: addr,
                     prefix: prefix,
                 };
-                let output = format_ipsubnet(subnet);
+                let output = ipsubnet_to_string(subnet);
                 let output = output.clone()
                     + "\n"
                     + &output
@@ -419,7 +419,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
                     addr: iprange_start,
                     prefix: prefix,
                 };
-                let output = format_ipsubnet(subnet);
+                let output = ipsubnet_to_string(subnet);
                 let output = output.clone()
                     + "\n"
                     + &output
