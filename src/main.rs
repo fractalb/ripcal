@@ -237,7 +237,6 @@ fn process_args(itr: &mut std::env::Args) -> () {
                     vec.push(range);
                     continue;
                 }
-                vec.sort();
                 process_ranges(&vec);
                 vec.clear();
             }
@@ -252,7 +251,6 @@ fn process_args(itr: &mut std::env::Args) -> () {
     }
 
     if range_merge {
-        vec.sort();
         process_ranges(&vec);
         vec.clear();
     }
@@ -307,6 +305,7 @@ fn process_ranges(vec: &Vec<Ipv4Range>) -> () {
     if vec.is_empty() {
         return;
     }
+    vec.sort();
     let vec = merge_ranges(vec);
     print_range_vec(&vec);
 
