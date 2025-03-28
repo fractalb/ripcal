@@ -49,14 +49,6 @@ fn print_help() {
 }
 
 #[derive(Copy, Clone)]
-enum ConversionType {
-    DefaultConversion = 0,
-    DecaDecimal = 1,
-    HexaDecimal = 2,
-    IpQuad = 3,
-}
-
-#[derive(Copy, Clone)]
 enum InputType {
     DecaDecimal = 1,
     HexaDecimal = 2,
@@ -68,7 +60,7 @@ type OutputType = InputType;
 struct Config {
     reverse_bytes: bool,
     filter_mode: bool,
-    conversion_type: ConversionType,
+    output_type: Option<OutputType>
 }
 
 impl Config {
@@ -76,7 +68,7 @@ impl Config {
         Config {
             reverse_bytes: false,
             filter_mode: false,
-            conversion_type: ConversionType::DefaultConversion,
+            output_type: None,
         }
     }
 }
@@ -124,12 +116,10 @@ fn merge_ranges(ranges: &mut Vec<Ipv4Range>) {
     ranges.drain(j..);
 }
 
-fn get_output_type(input_type: InputType, conversion_type: ConversionType) -> OutputType {
-    match conversion_type {
-        ConversionType::DecaDecimal => OutputType::DecaDecimal,
-        ConversionType::HexaDecimal => OutputType::HexaDecimal,
-        ConversionType::IpQuad => OutputType::IpQuad,
-        ConversionType::DefaultConversion => match input_type {
+fn get_output_type(input_type: InputType, output_type: Option<OutputType>) -> OutputType {
+    match output_type {
+        Some(contype) => contype,
+        None => match input_type {
             InputType::IpQuad => OutputType::HexaDecimal,
             _ => OutputType::IpQuad,
         },
@@ -220,11 +210,11 @@ fn process_args(itr: &mut std::env::Args) -> () {
         if a == "--reverse-bytes" || a == "-r" {
             config.reverse_bytes = true;
         } else if a == "--integer" || a == "-i" {
-            config.conversion_type = ConversionType::DecaDecimal;
+            config.output_type = Some(OutputType::DecaDecimal);
         } else if a == "--hex" || a == "-x" {
-            config.conversion_type = ConversionType::HexaDecimal;
+            config.output_type = Some(OutputType::HexaDecimal);
         } else if a == "--ipv4" || a == "-q" {
-            config.conversion_type = ConversionType::IpQuad;
+            config.output_type = Some(OutputType::IpQuad);
         } else if a == "--merge-ranges" || a == "-m" {
             range_merge = true;
         } else {
@@ -433,14 +423,14 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
     } else if let Ok(addr) = Ipv4Addr::from_str(&a) {
         // Dotted quad IPv4 address
         let input_type = InputType::IpQuad;
-        let output_type = get_output_type(input_type, config.conversion_type);
+        let output_type = get_output_type(input_type, config.output_type);
         let output = ipaddr_to_string(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else if let Ok(ip) = a.parse::<u32>() {
         // A decimal number as IPv4 address
         let addr = Ipv4Addr::from(ip);
         let input_type = InputType::DecaDecimal;
-        let output_type = get_output_type(input_type, config.conversion_type);
+        let output_type = get_output_type(input_type, config.output_type);
         let output = ipaddr_to_string(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else {
@@ -456,7 +446,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
         if let Ok(ip) = ip {
             let addr = Ipv4Addr::from(ip);
             let input_type = InputType::HexaDecimal;
-            let output_type = get_output_type(input_type, config.conversion_type);
+            let output_type = get_output_type(input_type, config.output_type);
             let output = ipaddr_to_string(addr, output_type, config.reverse_bytes);
             print_output(&output, &a, &config);
             return;
