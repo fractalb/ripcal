@@ -203,7 +203,7 @@ fn main() {
 fn process_args(itr: &mut std::env::Args) -> () {
     let mut config = Config::default_config();
     itr.next(); // Skip program name.
-    let mut empty_optional_args = true;
+    let mut no_args = true;
     let mut vec = Vec::<Ipv4Range>::new();
     let mut range_merge = false;
     for a in itr {
@@ -218,7 +218,7 @@ fn process_args(itr: &mut std::env::Args) -> () {
         } else if a == "--merge-ranges" || a == "-m" {
             range_merge = true;
         } else {
-            empty_optional_args = false;
+            no_args = false;
             if range_merge {
                 if let Some(range) = parse_range(&a) {
                     vec.push(range);
@@ -233,7 +233,7 @@ fn process_args(itr: &mut std::env::Args) -> () {
 
     // Enter filter mode.
     // Read from stdin and print to stdout
-    if empty_optional_args {
+    if no_args {
         process_stdin(config);
     }
 
@@ -378,6 +378,7 @@ fn ip_prefix_to_range(ip: u32, prefix: u8) -> Ipv4Range {
 
 fn process_ipaddress(a: &str, config: &Config) -> () {
     if let Some(n) = a.find('/') {
+        // A subnet (eg. 192.168.18.0/24)
         if let Ok(prefix) = u8::from_str(&a[n + 1..]) {
             if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
                 let addr: u32 = addr.into();
@@ -397,6 +398,7 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
         }
         println!("Invalid IP subnet: {}", a);
     } else if let Some(n) = a.find('-') {
+        // A range (eg. 192.168.18.0-192.168.18.255)
         if let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) {
             if let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) {
                 let iprange_start: u32 = iprange_start.into();
@@ -421,12 +423,13 @@ fn process_ipaddress(a: &str, config: &Config) -> () {
             }
         }
     } else if let Ok(addr) = Ipv4Addr::from_str(&a) {
-        // Dotted quad IPv4 address
+        // Dotted quad IPv4 address (eg. 192.168.18.0)
         let input_type = InputType::IpQuad;
         let output_type = get_output_type(input_type, config.output_type);
         let output = ipaddr_to_string(addr, output_type, config.reverse_bytes);
         print_output(&output, &a, &config);
     } else if let Ok(ip) = a.parse::<u32>() {
+        // A de number that can treated as an IPv4 address
         // A decimal number as IPv4 address
         let addr = Ipv4Addr::from(ip);
         let input_type = InputType::DecaDecimal;
