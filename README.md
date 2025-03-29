@@ -1,6 +1,8 @@
 # ripcal
-Convert IP addresses dotted quads to/from integers
-Also, Converts IP subnets to/from IP ranges
+IP address, IP subnet and IP range conversions.
+Converts IP address dotted quads to/from integers.
+Converts IP subnets to/from IP ranges.
+Merges/splits subnets/ranges.
 
         ripcal [-i | -x | -q ] [-r] <ip-address>...
                 Converts each <ip-address> to different formats
