@@ -159,7 +159,7 @@ impl Ipv4Subnet {
     }
     fn end_addr(self: &Self) -> Ipv4Addr {
         let start = mask_ip_addr(self.addr, self.prefix);
-        &start | Ipv4Addr::from(!mask_from_prefix(self.prefix))
+        &start | Ipv4Addr::from(!make_mask(self.prefix))
     }
 }
 
@@ -229,7 +229,7 @@ fn get_output_type(input_type: InputType, output_type: Option<OutputType>) -> Ou
     }
 }
 
-fn mask_from_prefix(prefix: u8) -> u32 {
+fn make_mask(prefix: u8) -> u32 {
     if prefix == 0 {
         return 0;
     }
@@ -242,7 +242,7 @@ fn mask_from_prefix(prefix: u8) -> u32 {
 }
 
 fn mask_ip_addr(ip: Ipv4Addr, prefix: u8) -> Ipv4Addr {
-    return ip & Ipv4Addr::from(mask_from_prefix(prefix));
+    return ip & Ipv4Addr::from(make_mask(prefix));
 }
 
 fn ipaddr_to_string(ipaddr: Ipv4Addr, output_type: OutputType, reverse_bytes: bool) -> String {
