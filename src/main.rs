@@ -444,6 +444,7 @@ fn process_ipaddress(a: &str, config: &Config) {
                 }
             }
         }
+        println!("Invalid IP range: {}", a);
     } else if let Ok(addr) = Ipv4Addr::from_str(&a) {
         // Dotted quad IPv4 address (eg. 192.168.18.0)
         let input_type = InputType::IpQuad;
