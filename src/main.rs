@@ -1,3 +1,6 @@
+mod iprange;
+use iprange::Ipv4Range;
+use iprange::Ipv4Subnet;
 use std::env;
 use std::io::stdin;
 use std::io::BufRead;
@@ -73,125 +76,6 @@ impl Config {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
-struct Ipv4Range {
-    start: Ipv4Addr,
-    end: Ipv4Addr,
-}
-
-impl std::convert::TryFrom<(Ipv4Addr, Ipv4Addr)> for Ipv4Range {
-    type Error = &'static str;
-    fn try_from(t: (Ipv4Addr, Ipv4Addr)) -> Result<Self, Self::Error> {
-        if t.0 > t.1 {
-            Err("Invalid Range")
-        } else {
-            Ok(Ipv4Range {
-                start: t.0,
-                end: t.1,
-            })
-        }
-    }
-}
-
-impl std::convert::TryFrom<(Ipv4Addr, u8)> for Ipv4Range {
-    type Error = &'static str;
-    fn try_from(t: (Ipv4Addr, u8)) -> Result<Self, Self::Error> {
-        Ok(Ipv4Range::from(&Ipv4Subnet::try_from(t)?))
-    }
-}
-
-impl std::convert::From<&Ipv4Subnet> for Ipv4Range {
-    fn from(ipsubnet: &Ipv4Subnet) -> Self {
-        Self {
-            start: ipsubnet.start_addr(),
-            end: ipsubnet.end_addr(),
-        }
-    }
-}
-
-impl std::fmt::Display for Ipv4Range {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{} - {}", self.start, self.end)
-    }
-}
-
-impl Ipv4Range {
-    fn get_prefix(self: &Self) -> u8 {
-        for i in 0..32 {
-            let start: u32 = self.start.into();
-            let end: u32 = self.end.into();
-            if (start >> i) == (end >> i) {
-                return 32 - i;
-            }
-        }
-        return 0;
-    }
-
-    fn parse_range(a: &str) -> Result<Ipv4Range, &'static str> {
-        if let Some(n) = a.find('/') {
-            if let Ok(prefix) = u8::from_str(&a[n + 1..]) {
-                if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
-                    return Ipv4Range::try_from((addr, prefix));
-                }
-            }
-            return Err("Invalid IP subnet");
-        } else if let Some(n) = a.find('-') {
-            if let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) {
-                if let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) {
-                    return Ipv4Range::try_from((iprange_start, iprange_end));
-                }
-            }
-            return Err("Invalid IP range");
-        }
-        Err("Invalid range/subnet")
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
-struct Ipv4Subnet {
-    addr: Ipv4Addr,
-    prefix: u8,
-}
-
-impl Ipv4Subnet {
-    fn start_addr(self: &Self) -> Ipv4Addr {
-        mask_ip_addr(self.addr, self.prefix)
-    }
-    fn end_addr(self: &Self) -> Ipv4Addr {
-        let start = mask_ip_addr(self.addr, self.prefix);
-        &start | Ipv4Addr::from(!make_mask(self.prefix))
-    }
-}
-
-impl std::convert::TryFrom<(Ipv4Addr, u8)> for Ipv4Subnet {
-    type Error = &'static str;
-    fn try_from(t: (Ipv4Addr, u8)) -> Result<Self, <Self as TryFrom<(Ipv4Addr, u8)>>::Error> {
-        if t.1 > 32 {
-            Err("Invalid prefix")
-        } else {
-            Ok(Self {
-                addr: t.0,
-                prefix: t.1,
-            })
-        }
-    }
-}
-
-impl std::convert::From<&Ipv4Range> for Ipv4Subnet {
-    fn from(iprange: &Ipv4Range) -> Self {
-        Self {
-            addr: iprange.start,
-            prefix: iprange.get_prefix(),
-        }
-    }
-}
-
-impl std::fmt::Display for Ipv4Subnet {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}/{}", self.addr, self.prefix)
-    }
-}
-
 /**
  * Expects a sorted ranges, in non-decreasing order.
  */
@@ -206,13 +90,14 @@ fn merge_ranges(ranges: &mut Vec<Ipv4Range>) {
         // It merges not only overlapping subnets, but also
         // adjacent subnets.
         // eg: 192.168.24.2.2/32, 192.168.24.2.3/32 => 192.168.24.2.2/31
-        let start: u32 = ranges[i].start.into();
-        let end: u32 = ranges[j].end.into();
+        let start: u32 = ranges[i].start().into();
+        let end: u32 = ranges[j].end().into();
         if start > end + 1 {
             j += 1;
             ranges[j] = ranges[i];
         } else {
-            ranges[j].end = std::cmp::max(ranges[j].end, ranges[i].end);
+            let new_end = std::cmp::max(ranges[j].end(), ranges[i].end());
+            ranges[j].update_end(new_end);
         }
     }
     j += 1;
@@ -227,22 +112,6 @@ fn get_output_type(input_type: InputType, output_type: Option<OutputType>) -> Ou
             _ => OutputType::IpQuad,
         },
     }
-}
-
-fn make_mask(prefix: u8) -> u32 {
-    if prefix == 0 {
-        return 0;
-    }
-    let mask: u32 = 0xffffffff;
-    if prefix < 32 {
-        let n = 32 - prefix;
-        return (mask >> n) << n;
-    }
-    return mask;
-}
-
-fn mask_ip_addr(ip: Ipv4Addr, prefix: u8) -> Ipv4Addr {
-    return ip & Ipv4Addr::from(make_mask(prefix));
 }
 
 fn ipaddr_to_string(ipaddr: Ipv4Addr, output_type: OutputType, reverse_bytes: bool) -> String {
@@ -391,8 +260,8 @@ fn count_suffix_zero_bits(ip: u64) -> u8 {
 
 fn ip_range_to_subnets(range: Ipv4Range) -> Vec<Ipv4Subnet> {
     let mut vec: Vec<Ipv4Subnet> = Vec::new();
-    let start: u32 = range.start.into();
-    let end: u32 = range.end.into();
+    let start: u32 = range.start().into();
+    let end: u32 = range.end().into();
     let mut start: u64 = start as u64;
     let end: u64 = end as u64;
     while start <= end {
@@ -402,10 +271,7 @@ fn ip_range_to_subnets(range: Ipv4Range) -> Vec<Ipv4Subnet> {
             diff >>= 1;
             s -= 1;
         }
-        vec.push(Ipv4Subnet {
-            addr: Ipv4Addr::from(start as u32),
-            prefix: 32 - s,
-        });
+        vec.push(Ipv4Subnet::try_from((start as u32, 32u8 - s)).unwrap());
         start += diff + 1;
     }
     return vec;
