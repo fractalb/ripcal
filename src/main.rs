@@ -135,18 +135,18 @@ fn main() {
     // println!("Program name: {:?}", itr.next().unwrap());
     itr.next(); // Skip program name.
 
-    if let Some(a) = itr.next() {
-        if a == "--version" {
-            return print_version();
-        } else if a == "--help" || a == "-h" {
-            return print_help();
-        } else {
-            process_args(&mut env::args())
-        }
-    } else {
+    let Some(a) = itr.next() else {
         // Enter filter mode.
         // Read from stdin and print to stdout
-        process_stdin(Config::default_config());
+        return process_stdin(Config::default_config());
+    };
+
+    if a == "--version" {
+        print_version()
+    } else if a == "--help" || a == "-h" {
+        print_help()
+    } else {
+        process_args(&mut env::args())
     }
 }
 
