@@ -223,7 +223,7 @@ fn process_ranges(vec: &mut Vec<Ipv4Range>) -> () {
 
     let mut vec2: Vec<Ipv4Subnet> = Vec::new();
     for i in 0..vec.len() {
-        let tmp = ip_range_to_subnets(vec[i]);
+        let tmp = vec[i].to_subnets();
         vec2.extend(tmp.iter());
     }
     print_subnet_vec(&vec2);
@@ -248,69 +248,15 @@ fn process_stdin(config: Config) -> () {
     }
 }
 
-fn count_suffix_zero_bits(ip: u64) -> u8 {
-    let mut i = 0;
-    let mut ip = ip;
-    while (i <= 32) && ((ip & 0x1) == 0x0) {
-        i += 1;
-        ip >>= 1
-    }
-    return i;
-}
-
-fn ip_range_to_subnets(range: Ipv4Range) -> Vec<Ipv4Subnet> {
-    let mut vec: Vec<Ipv4Subnet> = Vec::new();
-    let start: u32 = range.start().into();
-    let end: u32 = range.end().into();
-    let mut start: u64 = start as u64;
-    let end: u64 = end as u64;
-    while start <= end {
-        let mut s: u8 = count_suffix_zero_bits(start);
-        let mut diff: u64 = (1u64 << s) - 1;
-        while (start + diff) > end {
-            diff >>= 1;
-            s -= 1;
-        }
-        vec.push(Ipv4Subnet::try_from((start as u32, 32u8 - s)).unwrap());
-        start += diff + 1;
-    }
-    return vec;
-}
-
 fn process_ipaddress(a: &str, config: &Config) {
-    if let Some(n) = a.find('/') {
-        // A subnet (eg. 192.168.18.0/24)
-        if let Ok(prefix) = u8::from_str(&a[n + 1..]) {
-            if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
-                if let Ok(subnet) = Ipv4Subnet::try_from((addr, prefix)) {
-                    let output = format!("{subnet}")
-                        + "\n"
-                        + &format!("{subnet}")
-                        + " = "
-                        + &format!("{}", Ipv4Range::from(&subnet));
-                    print_output(&output, &a, &config);
-                    return;
-                }
-            }
-        }
-        println!("Invalid IP subnet: {}", a);
-    } else if let Some(n) = a.find('-') {
-        // A range (eg. 192.168.18.0-192.168.18.255)
-        if let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) {
-            if let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) {
-                if let Ok(iprange) = Ipv4Range::try_from((iprange_start, iprange_end)) {
-                    let subnet = Ipv4Subnet::from(&iprange);
-                    let output = format!("{subnet}")
-                        + "\n"
-                        + &format!("{subnet}")
-                        + " = "
-                        + &format!("{}", Ipv4Range::from(&subnet));
-                    print_output(&output, &a, &config);
-                    return;
-                }
-            }
-        }
-        println!("Invalid IP range: {}", a);
+    if let Ok(iprange) = Ipv4Range::from_str(a) {
+        let subnet = Ipv4Subnet::from(&iprange);
+        let output = format!("{subnet}")
+            + "\n"
+            + &format!("{subnet}")
+            + " = "
+            + &format!("{}", Ipv4Range::from(&subnet));
+        print_output(&output, &a, &config);
     } else if let Ok(addr) = Ipv4Addr::from_str(&a) {
         // Dotted quad IPv4 address (eg. 192.168.18.0)
         let input_type = InputType::IpQuad;

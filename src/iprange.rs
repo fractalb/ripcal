@@ -1,5 +1,16 @@
 use std::net::Ipv4Addr;
 use std::str::FromStr;
+use std::vec::Vec;
+
+fn count_suffix_zero_bits(ip: u64) -> u8 {
+    let mut i = 0;
+    let mut ip = ip;
+    while (i <= 32) && ((ip & 0x1) == 0x0) {
+        i += 1;
+        ip >>= 1
+    }
+    return i;
+}
 
 fn make_mask(prefix: u8) -> u32 {
     if prefix == 0 {
@@ -64,21 +75,49 @@ impl Ipv4Range {
 
     pub fn parse_range(a: &str) -> Result<Ipv4Range, &'static str> {
         if let Some(n) = a.find('/') {
-            if let Ok(prefix) = u8::from_str(&a[n + 1..]) {
-                if let Ok(addr) = Ipv4Addr::from_str(&a[..n]) {
-                    return Ipv4Range::try_from((addr, prefix));
-                }
-            }
-            return Err("Invalid IP subnet");
+            let Ok(prefix) = u8::from_str(&a[n + 1..]) else {
+                return Err("Invalid IP subnet prefix");
+            };
+            let Ok(addr) = Ipv4Addr::from_str(&a[..n]) else {
+                return Err("Invalid IP address");
+            };
+            return Ipv4Range::try_from((addr, prefix));
         } else if let Some(n) = a.find('-') {
-            if let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) {
-                if let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) {
-                    return Ipv4Range::try_from((iprange_start, iprange_end));
-                }
-            }
-            return Err("Invalid IP range");
+            let Ok(iprange_start) = Ipv4Addr::from_str(a[..n].trim()) else {
+                return Err("Invalid IP address");
+            };
+            let Ok(iprange_end) = Ipv4Addr::from_str(a[n + 1..].trim()) else {
+                return Err("Invalid IP address");
+            };
+            return Ipv4Range::try_from((iprange_start, iprange_end));
         }
         Err("Invalid IP range/subnet")
+    }
+
+    pub fn to_subnets(self: &Self) -> Vec<Ipv4Subnet> {
+        let mut vec: Vec<Ipv4Subnet> = Vec::new();
+        let start: u32 = self.start().into();
+        let end: u32 = self.end().into();
+        let mut start: u64 = start as u64;
+        let end: u64 = end as u64;
+        while start <= end {
+            let mut s: u8 = count_suffix_zero_bits(start);
+            let mut diff: u64 = (1u64 << s) - 1;
+            while (start + diff) > end {
+                diff >>= 1;
+                s -= 1;
+            }
+            vec.push(Ipv4Subnet::try_from((start as u32, 32u8 - s)).unwrap());
+            start += diff + 1;
+        }
+        return vec;
+    }
+}
+
+impl FromStr for Ipv4Range {
+    type Err = &'static str;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ipv4Range::parse_range(s)
     }
 }
 
@@ -134,6 +173,23 @@ impl Ipv4Subnet {
     }
 }
 
+impl FromStr for Ipv4Subnet {
+    type Err = &'static str;
+    fn from_str(s: &str) -> Result<Ipv4Subnet, Self::Err> {
+        let Some(n) = s.find('/') else {
+            return Err("Invalid subnet string");
+        };
+        // A subnet (eg. 192.168.18.0/24)
+        let Ok(prefix) = u8::from_str(&s[n + 1..]) else {
+            return Err("Invalid subnet prefix");
+        };
+        let Ok(addr) = Ipv4Addr::from_str(&s[..n]) else {
+            return Err("Invalid IP address");
+        };
+        Ipv4Subnet::try_from((addr, prefix))
+    }
+}
+
 impl std::convert::TryFrom<(Ipv4Addr, u8)> for Ipv4Subnet {
     type Error = &'static str;
     fn try_from(t: (Ipv4Addr, u8)) -> Result<Self, <Self as TryFrom<(Ipv4Addr, u8)>>::Error> {
@@ -168,4 +224,25 @@ impl std::fmt::Display for Ipv4Subnet {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}/{}", self.addr, self.prefix)
     }
+}
+
+#[test]
+fn instantiate_types() {
+    assert!(Ipv4Range::from_str("192.168.1.0-192.168.0.255").is_err());
+    assert!(Ipv4Range::from_str("127.0.0.1").is_err());
+    assert_eq!(
+        Ipv4Range::from_str("255.255.255.255/32").unwrap(),
+        Ipv4Range::from_str("255.255.255.255-255.255.255.255").unwrap()
+    );
+}
+
+#[test]
+fn range_to_subnet_conversion() {
+    let r: Ipv4Range = Ipv4Range::from_str("192.168.1.0 - 192.168.1.1").unwrap();
+    let s: Ipv4Subnet = Ipv4Subnet::from_str("192.168.1.0/31").unwrap();
+    assert_eq!(r.to_subnets(), vec![s]);
+
+    let r: Ipv4Range = Ipv4Range::from_str("0.0.0.0 - 255.255.255.255").unwrap();
+    let s: Ipv4Subnet = Ipv4Subnet::from_str("0.0.0.0/0").unwrap();
+    assert_eq!(r.to_subnets(), vec![s]);
 }
