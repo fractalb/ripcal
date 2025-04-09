@@ -242,6 +242,20 @@ fn range_to_subnet_conversion() {
     let s: Ipv4Subnet = Ipv4Subnet::from_str("192.168.1.0/31").unwrap();
     assert_eq!(r.to_subnets(), vec![s]);
 
+    let r: Ipv4Range = Ipv4Range::from_str("192.168.1.1 - 192.168.1.1").unwrap();
+    let s: Ipv4Subnet = Ipv4Subnet::from_str("192.168.1.1/32").unwrap();
+    assert_eq!(r.to_subnets(), vec![s]);
+
+    let r: Ipv4Range = Ipv4Range::from_str("192.168.1.1 - 192.168.1.2").unwrap();
+    let s1: Ipv4Subnet = Ipv4Subnet::from_str("192.168.1.1/32").unwrap();
+    let s2: Ipv4Subnet = Ipv4Subnet::from_str("192.168.1.2/32").unwrap();
+    assert_eq!(r.to_subnets(), vec![s1, s2]);
+
+    let r: Ipv4Range = Ipv4Range::from_str("192.168.1.1 - 192.168.1.3").unwrap();
+    let s1: Ipv4Subnet = Ipv4Subnet::from_str("192.168.1.1/32").unwrap();
+    let s2: Ipv4Subnet = Ipv4Subnet::from_str("192.168.1.2/31").unwrap();
+    assert_eq!(r.to_subnets(), vec![s1, s2]);
+
     let r: Ipv4Range = Ipv4Range::from_str("0.0.0.0 - 255.255.255.255").unwrap();
     let s: Ipv4Subnet = Ipv4Subnet::from_str("0.0.0.0/0").unwrap();
     assert_eq!(r.to_subnets(), vec![s]);
