@@ -3,13 +3,9 @@ use std::str::FromStr;
 use std::vec::Vec;
 
 fn count_suffix_zero_bits(ip: u64) -> u8 {
-    let mut i = 0;
-    let mut ip = ip;
-    while (i <= 32) && ((ip & 0x1) == 0x0) {
-        i += 1;
-        ip >>= 1
-    }
-    return i;
+    let z = ip.trailing_zeros();
+    let z = if z > 32 { 32 } else { z };
+    z as u8
 }
 
 fn make_mask(prefix: u8) -> u32 {
