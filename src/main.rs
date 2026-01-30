@@ -211,6 +211,8 @@ fn print_subnet_vec(vec: &Vec<Ipv4Subnet>) {
         print!(", {}", vec[i]);
     }
     println!("]");
+    // This single line should be enough. Needs testing though.
+    // print!("Second: [{}]", vec.iter().map(|x|{x.to_string()}).collect::<Vec<String>>().join(", "));
 }
 
 fn process_ranges(vec: &mut Vec<Ipv4Range>) -> () {

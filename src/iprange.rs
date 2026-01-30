@@ -226,6 +226,8 @@ impl std::fmt::Display for Ipv4Subnet {
 fn instantiate_types() {
     assert!(Ipv4Range::from_str("192.168.1.0-192.168.0.255").is_err());
     assert!(Ipv4Range::from_str("127.0.0.1").is_err());
+    assert!(Ipv4Range::from_str("127.0.0.1-127.0.0.0").is_err());
+    assert!(Ipv4Range::from_str("127.0.0.0-127.0.0.1").is_ok());
     assert_eq!(
         Ipv4Range::from_str("255.255.255.255/32").unwrap(),
         Ipv4Range::from_str("255.255.255.255-255.255.255.255").unwrap()
